@@ -12,6 +12,15 @@
   <a href="README.md">English</a> | <b>Русский</b>
 </p>
 
+<p align="center">
+  <a href="https://github.com/yto4ka002/snowfall/releases/latest/download/snowfall.exe">
+    <img src="https://img.shields.io/badge/Скачать-snowfall.exe%20(~490%20КБ)-2ea44f?style=for-the-badge&logo=windows" alt="Скачать snowfall.exe" />
+  </a>
+  <a href="https://github.com/yto4ka002/snowfall/raw/main/snowfall.exe">
+    <img src="https://img.shields.io/badge/Прямая%20ссылка-snowfall.exe-blue?style=for-the-badge&logo=github" alt="Скачать напрямую из репозитория" />
+  </a>
+</p>
+
 ---
 
 **Snowfall** — это легковесный, высокопроизводительный нативный симулятор снегопада для Windows 11 и Windows 10, написанный на языке **Rust** с использованием низкоуровневых графических технологий **Direct2D**, **Direct3D 11** и **DirectComposition**.

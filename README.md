@@ -12,6 +12,15 @@
   <b>English</b> | <a href="README_RU.md">Русский</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/yto4ka002/snowfall/releases/latest/download/snowfall.exe">
+    <img src="https://img.shields.io/badge/Download-snowfall.exe%20(~490%20KB)-2ea44f?style=for-the-badge&logo=windows" alt="Download snowfall.exe" />
+  </a>
+  <a href="https://github.com/yto4ka002/snowfall/raw/main/snowfall.exe">
+    <img src="https://img.shields.io/badge/Direct%20Repo-snowfall.exe-blue?style=for-the-badge&logo=github" alt="Direct Repo Download" />
+  </a>
+</p>
+
 ---
 
 **Snowfall** is a lightweight, ultra-high-performance native desktop snow simulator crafted specifically for Windows 11 and Windows 10. Built entirely in **Rust** using **Direct2D**, **Direct3D 11**, and **DirectComposition**, it creates an interactive winter atmosphere directly on top of your desktop and application windows.
