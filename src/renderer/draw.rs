@@ -294,23 +294,6 @@ impl DrawEngine {
             // Fill with soft snow mound brush
             dc.FillGeometry(&fill_geo, &resources.mound_fill_brush, None);
 
-            // Subtle cool shadow along the bottom contact ledge for 3D volume
-            if peak_h >= 3.5 {
-                dc.DrawLine(
-                    Vector2 {
-                        X: left_anchor_x + 2.0,
-                        Y: base_y - 0.5,
-                    },
-                    Vector2 {
-                        X: right_anchor_x - 2.0,
-                        Y: base_y - 0.5,
-                    },
-                    &resources.mound_shadow_brush,
-                    1.2,
-                    None,
-                );
-            }
-
             // Soft frosty highlight on top crest ONLY if snow is thick enough (>= 1.6 px)
             if peak_h >= 1.6 {
                 let crust_geo = factory.CreatePathGeometry()?;

@@ -290,7 +290,7 @@ impl WindowTracker {
             record.update_position(rect, shake_sensitivity);
             record.updated_this_tick = true;
 
-            let edge_y = rect.top as f32;
+            let edge_y = rect.top as f32 + 1.5;
             let mut segments = vec![(rect.left as f32, rect.right as f32)];
 
             for occ in &occluders {
