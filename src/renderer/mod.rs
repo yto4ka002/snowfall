@@ -49,6 +49,7 @@ impl Renderer {
         particles: &ParticleSystem,
         accumulation: &AccumulationSystem,
         window_tracker: &crate::window_tracker::WindowTracker,
+        tractor: &crate::tractor::TractorSystem,
         settings: &crate::config::Settings,
     ) -> Result<()> {
         self.context.begin_draw();
@@ -73,6 +74,7 @@ impl Renderer {
             &self.resources,
             particles,
             accumulation,
+            tractor,
             occluders,
             self.overlay.x as f32,
             self.overlay.y as f32,

@@ -25,6 +25,8 @@ pub struct Settings {
     pub auto_start: bool,
     #[serde(default = "default_true")]
     pub snow_over_windows: bool,
+    #[serde(default = "default_true")]
+    pub auto_tractor: bool,
 }
 
 fn default_true() -> bool {
@@ -47,6 +49,7 @@ impl Default for Settings {
             pause_on_fullscreen: true,
             auto_start: false,
             snow_over_windows: true,
+            auto_tractor: true,
         }
     }
 }

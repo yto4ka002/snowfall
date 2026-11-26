@@ -53,7 +53,8 @@ Unlike static desktop wallpapers or heavy Electron/web overlays, Snowfall featur
 - **Angle of Repose & Diffusion**: Snow naturally flows from sharp peaks down into crevices and tapers off at window edges.
 - **Window Movement Synchronization**: Smoothly translates accumulated snow together with the window as you drag it across your desktop.
 
-### 🌪️ 4. Window Aero Shake & Snow Shedding Mechanics
+### 🌪️ 4. Window Aero Shake & Snowplow Tractor
+- **Autonomous Snowplow Tractor**: Every 2–3 minutes (or immediately via the **🚜 Clear Snow** button), an animated snowplow tractor with a curved blade, spinning wheels, blinking amber beacon, and exhaust puffs drives along open windows and clears all accumulated snow with spraying snow waves.
 - **Real-Time Window Velocity Tracking**: Monitors every window's position, velocity, and directional oscillation frequency.
 - **Aero Shake Recognition**: Rapidly shaking a window side-to-side triggers physical snow detachment:
   - Snow fractures and tears away from the window surface proportionally to shake velocity.
@@ -179,6 +180,7 @@ snowfall/
     ├── cursor.rs             # Mouse velocity tracker and aerodynamic vortices
     ├── particle.rs           # Snowflake particle pool, flake types, and render data
     ├── window_tracker.rs     # Win32/DWM window tracking, Z-order clipping, Aero Shake
+    ├── tractor.rs            # Animated snowplow tractor patrol and window clearing logic
     ├── accumulation.rs       # Snow shelf height-field, diffusion, and shedding physics
     ├── physics.rs            # Physics engine: collision detection and particle movement
     ├── renderer/             # Direct2D hardware-accelerated rendering engine

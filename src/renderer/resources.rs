@@ -13,6 +13,14 @@ pub struct RenderResources {
     pub mound_shadow_brush: ID2D1SolidColorBrush,
     pub mound_outline_brush: ID2D1SolidColorBrush,
 
+    // Tractor brushes
+    pub tractor_body_brush: ID2D1SolidColorBrush,
+    pub tractor_dark_brush: ID2D1SolidColorBrush,
+    pub tractor_glass_brush: ID2D1SolidColorBrush,
+    pub tractor_blade_brush: ID2D1SolidColorBrush,
+    pub tractor_beacon_brush: ID2D1SolidColorBrush,
+    pub tractor_smoke_brush: ID2D1SolidColorBrush,
+
     // Pre-rendered high-quality snowflake textures
     pub sprite_small_soft: ID2D1Bitmap1,
     pub sprite_medium_crystal: ID2D1Bitmap1,
@@ -88,6 +96,66 @@ impl RenderResources {
                 None,
             )?;
 
+            let tractor_body_brush = d2d_dc.CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: 0.97,
+                    g: 0.67,
+                    b: 0.14,
+                    a: 1.0,
+                },
+                None,
+            )?;
+
+            let tractor_dark_brush = d2d_dc.CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: 0.15,
+                    g: 0.18,
+                    b: 0.23,
+                    a: 1.0,
+                },
+                None,
+            )?;
+
+            let tractor_glass_brush = d2d_dc.CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: 0.66,
+                    g: 0.86,
+                    b: 0.98,
+                    a: 0.90,
+                },
+                None,
+            )?;
+
+            let tractor_blade_brush = d2d_dc.CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: 0.78,
+                    g: 0.84,
+                    b: 0.91,
+                    a: 1.0,
+                },
+                None,
+            )?;
+
+            let tractor_beacon_brush = d2d_dc.CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: 1.0,
+                    g: 0.42,
+                    b: 0.08,
+                    a: 1.0,
+                },
+                None,
+            )?;
+
+            let tractor_smoke_brush = d2d_dc.CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: 0.78,
+                    g: 0.82,
+                    b: 0.88,
+                    a: 0.55,
+                },
+                None,
+            )?;
+
             let sprite_small_soft = Self::create_soft_disc_sprite(d2d_factory, d2d_dc, 48)?;
             let sprite_medium_crystal = Self::create_crystal_sprite(d2d_factory, d2d_dc, 64)?;
             let sprite_large_fluff = Self::create_fluff_sprite(d2d_factory, d2d_dc, 64)?;
@@ -99,6 +167,12 @@ impl RenderResources {
                 mound_highlight_brush,
                 mound_shadow_brush,
                 mound_outline_brush,
+                tractor_body_brush,
+                tractor_dark_brush,
+                tractor_glass_brush,
+                tractor_blade_brush,
+                tractor_beacon_brush,
+                tractor_smoke_brush,
                 sprite_small_soft,
                 sprite_medium_crystal,
                 sprite_large_fluff,

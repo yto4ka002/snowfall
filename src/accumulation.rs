@@ -351,6 +351,7 @@ impl AccumulationSystem {
         }
     }
 
+    #[allow(dead_code)]
     pub fn clear_all(&mut self) {
         for shelf in self.shelves.values_mut() {
             for h in shelf.heights.iter_mut() {

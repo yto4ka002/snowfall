@@ -2,6 +2,7 @@ use crate::accumulation::{AccumulationSystem, COLUMN_WIDTH};
 use crate::particle::{DebrisKind, DebrisParticle, FlakeType, ParticleSystem};
 use crate::renderer::context::RenderContext;
 use crate::renderer::resources::RenderResources;
+use crate::tractor::TractorSystem;
 use windows::core::Result;
 use windows::Win32::Graphics::Direct2D::*;
 use windows::Win32::Graphics::Direct2D::Common::*;
@@ -15,6 +16,7 @@ impl DrawEngine {
         resources: &RenderResources,
         particles: &ParticleSystem,
         accumulation: &AccumulationSystem,
+        tractor: &TractorSystem,
         occluders: Option<&[(f32, f32, f32, f32)]>,
         virtual_x: f32,
         virtual_y: f32,
@@ -25,11 +27,14 @@ impl DrawEngine {
         // 1. Draw Accumulated Snow Mounds on application windows
         Self::draw_shelf_mounds(dc, factory, resources, accumulation, virtual_x, virtual_y)?;
 
-        // 2. Draw Falling Ambient Snowflakes (optionally occluded by open application windows)
-        Self::draw_particles(dc, resources, particles, occluders, virtual_x, virtual_y)?;
+        // 2. Draw Snowplow Tractor clearing snow along window ledges
+        Self::draw_tractor(dc, factory, resources, tractor, virtual_x, virtual_y)?;
 
         // 3. Draw Dislodged Falling Debris (avalanche chunks, pellets, powder mist)
         Self::draw_debris(dc, resources, &particles.debris, virtual_x, virtual_y)?;
+
+        // 4. Draw Falling Ambient Snowflakes (optionally occluded by open application windows)
+        Self::draw_particles(dc, resources, particles, occluders, virtual_x, virtual_y)?;
 
         Ok(())
     }
@@ -357,6 +362,304 @@ impl DrawEngine {
                     }
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    fn draw_tractor(
+        dc: &ID2D1DeviceContext,
+        factory: &ID2D1Factory1,
+        resources: &RenderResources,
+        tractor: &TractorSystem,
+        virt_x: f32,
+        virt_y: f32,
+    ) -> Result<()> {
+        unsafe {
+            // 1. Always render active exhaust puffs in world space
+            for puff in &tractor.exhaust {
+                if !puff.active {
+                    continue;
+                }
+                let t = (puff.life / puff.max_life).clamp(0.0, 1.0);
+                resources.tractor_smoke_brush.SetOpacity(0.55 * (1.0 - t));
+                dc.FillEllipse(
+                    &D2D1_ELLIPSE {
+                        point: Vector2 {
+                            X: puff.x - virt_x,
+                            Y: puff.y - virt_y,
+                        },
+                        radiusX: puff.size,
+                        radiusY: puff.size * 0.82,
+                    },
+                    &resources.tractor_smoke_brush,
+                );
+            }
+            resources.tractor_smoke_brush.SetOpacity(0.55);
+
+            if !tractor.active || tractor.alpha <= 0.01 {
+                return Ok(());
+            }
+
+            let alpha = tractor.alpha;
+            resources.tractor_body_brush.SetOpacity(alpha);
+            resources.tractor_dark_brush.SetOpacity(alpha);
+            resources.tractor_glass_brush.SetOpacity(0.9 * alpha);
+            resources.tractor_blade_brush.SetOpacity(alpha);
+
+            let rx = tractor.x - virt_x;
+            let ry = tractor.y - virt_y;
+            let bounce_y = (tractor.bounce_phase).sin() * 0.55;
+
+            let mat = Matrix3x2 {
+                M11: tractor.direction,
+                M12: 0.0,
+                M21: 0.0,
+                M22: 1.0,
+                M31: rx,
+                M32: ry + bounce_y,
+            };
+            dc.SetTransform(&mat);
+
+            // 2. Pushed snow wave right in front of the plow blade
+            if tractor.snow_wave > 0.6 {
+                let w_h = tractor.snow_wave.clamp(1.5, 11.5);
+                let wave_ellipse = D2D1_ELLIPSE {
+                    point: Vector2 {
+                        X: 25.0,
+                        Y: -w_h * 0.42,
+                    },
+                    radiusX: 5.5,
+                    radiusY: w_h * 0.52,
+                };
+                resources.mound_outline_brush.SetOpacity(0.58 * alpha);
+                resources.mound_fill_brush.SetOpacity(0.95 * alpha);
+                dc.DrawEllipse(&wave_ellipse, &resources.mound_outline_brush, 1.4, None);
+                dc.FillEllipse(&wave_ellipse, &resources.mound_fill_brush);
+                resources.mound_outline_brush.SetOpacity(0.58);
+                resources.mound_fill_brush.SetOpacity(0.92);
+            }
+
+            // 3. Exhaust pipe on hood
+            let exhaust_rect = D2D_RECT_F {
+                left: 6.5,
+                top: -25.0,
+                right: 9.0,
+                bottom: -18.0,
+            };
+            dc.FillRectangle(&exhaust_rect, &resources.tractor_dark_brush);
+
+            // 4. Engine hood
+            let hood_rect = D2D1_ROUNDED_RECT {
+                rect: D2D_RECT_F {
+                    left: -1.0,
+                    top: -18.5,
+                    right: 14.5,
+                    bottom: -9.5,
+                },
+                radiusX: 2.0,
+                radiusY: 2.0,
+            };
+            dc.FillRoundedRectangle(&hood_rect, &resources.tractor_body_brush);
+            dc.DrawRoundedRectangle(&hood_rect, &resources.tractor_dark_brush, 1.2, None);
+
+            // Hood grille vents
+            dc.DrawLine(
+                Vector2 { X: 10.5, Y: -16.0 },
+                Vector2 { X: 10.5, Y: -11.8 },
+                &resources.tractor_dark_brush,
+                1.0,
+                None,
+            );
+            dc.DrawLine(
+                Vector2 { X: 12.5, Y: -16.0 },
+                Vector2 { X: 12.5, Y: -11.8 },
+                &resources.tractor_dark_brush,
+                1.0,
+                None,
+            );
+
+            // Warm headlight on front
+            resources.tractor_beacon_brush.SetOpacity(0.95 * alpha);
+            dc.FillEllipse(
+                &D2D1_ELLIPSE {
+                    point: Vector2 { X: 14.8, Y: -13.8 },
+                    radiusX: 1.8,
+                    radiusY: 2.0,
+                },
+                &resources.tractor_beacon_brush,
+            );
+
+            // 5. Rear Cab + Window + Roof
+            let cab_rect = D2D1_ROUNDED_RECT {
+                rect: D2D_RECT_F {
+                    left: -15.5,
+                    top: -25.5,
+                    right: 0.5,
+                    bottom: -9.5,
+                },
+                radiusX: 2.0,
+                radiusY: 2.0,
+            };
+            dc.FillRoundedRectangle(&cab_rect, &resources.tractor_body_brush);
+            dc.DrawRoundedRectangle(&cab_rect, &resources.tractor_dark_brush, 1.2, None);
+
+            let cab_roof = D2D1_ROUNDED_RECT {
+                rect: D2D_RECT_F {
+                    left: -17.0,
+                    top: -27.0,
+                    right: 2.0,
+                    bottom: -24.2,
+                },
+                radiusX: 1.0,
+                radiusY: 1.0,
+            };
+            dc.FillRoundedRectangle(&cab_roof, &resources.tractor_body_brush);
+            dc.DrawRoundedRectangle(&cab_roof, &resources.tractor_dark_brush, 1.0, None);
+
+            let window_rect = D2D1_ROUNDED_RECT {
+                rect: D2D_RECT_F {
+                    left: -12.8,
+                    top: -22.6,
+                    right: -2.0,
+                    bottom: -14.2,
+                },
+                radiusX: 1.2,
+                radiusY: 1.2,
+            };
+            dc.FillRoundedRectangle(&window_rect, &resources.tractor_glass_brush);
+            dc.DrawRoundedRectangle(&window_rect, &resources.tractor_dark_brush, 1.0, None);
+
+            // 6. Blinking amber roof beacon
+            let beacon_pulse = 0.55 + 0.45 * (tractor.beacon_phase).sin();
+            dc.FillRectangle(
+                &D2D_RECT_F {
+                    left: -9.2,
+                    top: -29.0,
+                    right: -5.8,
+                    bottom: -27.0,
+                },
+                &resources.tractor_dark_brush,
+            );
+            resources.tractor_beacon_brush.SetOpacity((0.4 + 0.6 * beacon_pulse) * alpha);
+            dc.FillEllipse(
+                &D2D1_ELLIPSE {
+                    point: Vector2 { X: -7.5, Y: -30.2 },
+                    radiusX: 2.3,
+                    radiusY: 2.2,
+                },
+                &resources.tractor_beacon_brush,
+            );
+            if beacon_pulse > 0.65 {
+                resources.tractor_beacon_brush.SetOpacity(0.28 * beacon_pulse * alpha);
+                dc.FillEllipse(
+                    &D2D1_ELLIPSE {
+                        point: Vector2 { X: -7.5, Y: -30.2 },
+                        radiusX: 4.8,
+                        radiusY: 4.5,
+                    },
+                    &resources.tractor_beacon_brush,
+                );
+            }
+
+            // 7. Curved Front Snowplow Blade + Push Arm
+            dc.DrawLine(
+                Vector2 { X: 11.5, Y: -8.5 },
+                Vector2 { X: 19.0, Y: -5.5 },
+                &resources.tractor_dark_brush,
+                2.2,
+                None,
+            );
+
+            let blade_geo = factory.CreatePathGeometry()?;
+            let blade_sink = blade_geo.Open()?;
+            blade_sink.BeginFigure(Vector2 { X: 22.5, Y: -14.5 }, D2D1_FIGURE_BEGIN_FILLED);
+            blade_sink.AddQuadraticBezier(&D2D1_QUADRATIC_BEZIER_SEGMENT {
+                point1: Vector2 { X: 18.2, Y: -7.0 },
+                point2: Vector2 { X: 23.5, Y: 0.0 },
+            });
+            blade_sink.AddLine(Vector2 { X: 17.8, Y: -0.6 });
+            blade_sink.AddQuadraticBezier(&D2D1_QUADRATIC_BEZIER_SEGMENT {
+                point1: Vector2 { X: 15.2, Y: -6.8 },
+                point2: Vector2 { X: 18.2, Y: -13.5 },
+            });
+            blade_sink.EndFigure(D2D1_FIGURE_END_CLOSED);
+            blade_sink.Close()?;
+
+            dc.FillGeometry(&blade_geo, &resources.tractor_blade_brush, None);
+            dc.DrawGeometry(&blade_geo, &resources.tractor_dark_brush, 1.25, None);
+
+            // 8. Spinning Tractor Wheels (Big Rear + Front)
+            let rear_c = Vector2 { X: -9.5, Y: -6.8 };
+            let rear_r = 6.8f32;
+            dc.FillEllipse(
+                &D2D1_ELLIPSE {
+                    point: rear_c,
+                    radiusX: rear_r,
+                    radiusY: rear_r,
+                },
+                &resources.tractor_dark_brush,
+            );
+            dc.FillEllipse(
+                &D2D1_ELLIPSE {
+                    point: rear_c,
+                    radiusX: 3.1,
+                    radiusY: 3.1,
+                },
+                &resources.tractor_body_brush,
+            );
+            let sc = tractor.wheel_phase.cos() * 2.8;
+            let ss = tractor.wheel_phase.sin() * 2.8;
+            dc.DrawLine(
+                Vector2 { X: rear_c.X - sc, Y: rear_c.Y - ss },
+                Vector2 { X: rear_c.X + sc, Y: rear_c.Y + ss },
+                &resources.tractor_dark_brush,
+                1.1,
+                None,
+            );
+            dc.DrawLine(
+                Vector2 { X: rear_c.X + ss, Y: rear_c.Y - sc },
+                Vector2 { X: rear_c.X - ss, Y: rear_c.Y + sc },
+                &resources.tractor_dark_brush,
+                1.1,
+                None,
+            );
+
+            let front_c = Vector2 { X: 10.0, Y: -4.6 };
+            let front_r = 4.6f32;
+            dc.FillEllipse(
+                &D2D1_ELLIPSE {
+                    point: front_c,
+                    radiusX: front_r,
+                    radiusY: front_r,
+                },
+                &resources.tractor_dark_brush,
+            );
+            dc.FillEllipse(
+                &D2D1_ELLIPSE {
+                    point: front_c,
+                    radiusX: 2.0,
+                    radiusY: 2.0,
+                },
+                &resources.tractor_body_brush,
+            );
+            let fc = (tractor.wheel_phase * 1.48).cos() * 1.8;
+            let fs = (tractor.wheel_phase * 1.48).sin() * 1.8;
+            dc.DrawLine(
+                Vector2 { X: front_c.X - fc, Y: front_c.Y - fs },
+                Vector2 { X: front_c.X + fc, Y: front_c.Y + fs },
+                &resources.tractor_dark_brush,
+                1.0,
+                None,
+            );
+
+            // Restore transform and brush opacities
+            dc.SetTransform(&Matrix3x2::identity());
+            resources.tractor_body_brush.SetOpacity(1.0);
+            resources.tractor_dark_brush.SetOpacity(1.0);
+            resources.tractor_glass_brush.SetOpacity(0.9);
+            resources.tractor_blade_brush.SetOpacity(1.0);
+            resources.tractor_beacon_brush.SetOpacity(1.0);
         }
 
         Ok(())

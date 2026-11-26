@@ -33,6 +33,7 @@ pub const ID_CHECK_CURSOR: usize = 222;
 pub const ID_CHECK_FULLSCREEN: usize = 223;
 pub const ID_CHECK_AUTOSTART: usize = 224;
 pub const ID_CHECK_SNOW_OVER_WINDOWS: usize = 225;
+pub const ID_CHECK_AUTO_TRACTOR: usize = 226;
 
 pub const ID_RADIO_60FPS: usize = 230;
 pub const ID_RADIO_30FPS: usize = 231;
@@ -122,6 +123,7 @@ unsafe extern "system" fn settings_wndproc(
                 }
                 ID_CHECK_ACCUMULATION
                 | ID_CHECK_SNOW_OVER_WINDOWS
+                | ID_CHECK_AUTO_TRACTOR
                 | ID_CHECK_CURSOR
                 | ID_CHECK_FULLSCREEN
                 | ID_CHECK_AUTOSTART
@@ -271,7 +273,7 @@ impl SettingsDialogHandle {
                     let sw = GetSystemMetrics(SM_CXSCREEN);
                     let sh = GetSystemMetrics(SM_CYSCREEN);
                     let win_w = 475;
-                    let win_h = 695;
+                    let win_h = 720;
                     let win_x = (sw - win_w) / 2;
                     let win_y = (sh - win_h) / 2;
 
@@ -367,7 +369,7 @@ impl SettingsDialog {
         self.create_button(h, instance, w!("⏻ Закрыть программу"), 258, 42, 192, 40, ID_BTN_EXIT_APP);
 
         // 3. Quick Actions & Weather Presets
-        self.create_button(h, instance, w!("🧹 Смахнуть снег с окон"), 20, 90, 220, 28, ID_BTN_CLEAR_SNOW);
+        self.create_button(h, instance, w!("🚜 Убрать снег"), 20, 90, 220, 28, ID_BTN_CLEAR_SNOW);
         self.create_button(h, instance, w!("↺ Сбросить настройки"), 248, 90, 202, 28, ID_BTN_RESET_DEFAULTS);
 
         self.create_button(h, instance, w!("❄ Лёгкий снег"), 20, 124, 138, 26, ID_BTN_PRESET_LIGHT);
@@ -396,19 +398,20 @@ impl SettingsDialog {
         self.create_slider(h, instance, 20, 383, 430, 26, ID_SLIDER_SHAKE);
 
         // 5. Checkboxes (start at y=422)
-        self.create_checkbox(h, instance, w!("Снегопад поверх окон приложений"), 25, 422, 380, 22, ID_CHECK_SNOW_OVER_WINDOWS);
-        self.create_checkbox(h, instance, w!("Накапливать снежные шапки на окнах"), 25, 446, 380, 22, ID_CHECK_ACCUMULATION);
-        self.create_checkbox(h, instance, w!("Реакция снега на курсор мыши (завихрения)"), 25, 470, 380, 22, ID_CHECK_CURSOR);
-        self.create_checkbox(h, instance, w!("Пауза в полноэкранных играх и видео"), 25, 494, 380, 22, ID_CHECK_FULLSCREEN);
-        self.create_checkbox(h, instance, w!("Запускать автоматически с Windows"), 25, 518, 380, 22, ID_CHECK_AUTOSTART);
+        self.create_checkbox(h, instance, w!("Снегопад поверх окон приложений"), 25, 422, 410, 22, ID_CHECK_SNOW_OVER_WINDOWS);
+        self.create_checkbox(h, instance, w!("Накапливать снежные шапки на окнах"), 25, 446, 410, 22, ID_CHECK_ACCUMULATION);
+        self.create_checkbox(h, instance, w!("Трактор убирает снег каждые 2–3 минуты"), 25, 470, 410, 22, ID_CHECK_AUTO_TRACTOR);
+        self.create_checkbox(h, instance, w!("Реакция снега на курсор мыши (завихрения)"), 25, 494, 410, 22, ID_CHECK_CURSOR);
+        self.create_checkbox(h, instance, w!("Пауза в полноэкранных играх и видео"), 25, 518, 410, 22, ID_CHECK_FULLSCREEN);
+        self.create_checkbox(h, instance, w!("Запускать автоматически с Windows"), 25, 542, 410, 22, ID_CHECK_AUTOSTART);
 
-        // 6. Frame Rate (y=550)
-        self.create_label(h, instance, w!("Режим плавности:"), 25, 552, 140, 20, 0);
-        self.create_radio(h, instance, w!("60 FPS (Плавно)"), 170, 550, 125, 22, ID_RADIO_60FPS);
-        self.create_radio(h, instance, w!("30 FPS (Экономия)"), 300, 550, 140, 22, ID_RADIO_30FPS);
+        // 6. Frame Rate (y=574)
+        self.create_label(h, instance, w!("Режим плавности:"), 25, 576, 140, 20, 0);
+        self.create_radio(h, instance, w!("60 FPS (Плавно)"), 170, 574, 125, 22, ID_RADIO_60FPS);
+        self.create_radio(h, instance, w!("30 FPS (Экономия)"), 300, 574, 140, 22, ID_RADIO_30FPS);
 
-        // 7. Bottom Tray Button (y=590)
-        self.create_button(h, instance, w!("Свернуть окно в системный трей (фоновый режим)"), 20, 590, 430, 34, ID_BTN_MINIMIZE_TRAY);
+        // 7. Bottom Tray Button (y=614)
+        self.create_button(h, instance, w!("Свернуть окно в системный трей (фоновый режим)"), 20, 614, 430, 34, ID_BTN_MINIMIZE_TRAY);
     }
 
     unsafe fn create_label(
@@ -686,6 +689,7 @@ impl SettingsDialog {
 
             self.set_check(ID_CHECK_SNOW_OVER_WINDOWS, s.snow_over_windows);
             self.set_check(ID_CHECK_ACCUMULATION, s.snow_accumulation);
+            self.set_check(ID_CHECK_AUTO_TRACTOR, s.auto_tractor);
             self.set_check(ID_CHECK_CURSOR, s.cursor_interaction);
             self.set_check(ID_CHECK_FULLSCREEN, s.pause_on_fullscreen);
             self.set_check(ID_CHECK_AUTOSTART, s.auto_start);
@@ -772,6 +776,7 @@ impl SettingsDialog {
             let mut s = self.settings.lock().unwrap();
             s.snow_over_windows = self.get_check(ID_CHECK_SNOW_OVER_WINDOWS);
             s.snow_accumulation = self.get_check(ID_CHECK_ACCUMULATION);
+            s.auto_tractor = self.get_check(ID_CHECK_AUTO_TRACTOR);
             s.cursor_interaction = self.get_check(ID_CHECK_CURSOR);
             s.pause_on_fullscreen = self.get_check(ID_CHECK_FULLSCREEN);
             s.auto_start = self.get_check(ID_CHECK_AUTOSTART);

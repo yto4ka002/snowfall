@@ -59,7 +59,7 @@ impl TrayIcon {
 
             let _ = AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, w!("Окно управления Snowfall"));
             let _ = AppendMenuW(menu, MF_STRING, ID_TRAY_TOGGLE_ENABLED, enabled_text);
-            let _ = AppendMenuW(menu, MF_STRING, ID_TRAY_CLEAR_SNOW, w!("Смахнуть снег с окон"));
+            let _ = AppendMenuW(menu, MF_STRING, ID_TRAY_CLEAR_SNOW, w!("🚜 Убрать снег"));
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
             let _ = AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, w!("Закрыть программу (Выход)"));
 

@@ -5,6 +5,7 @@ use crate::particle::{DebrisKind, ParticleSystem};
 use crate::performance::PerformanceManager;
 use crate::physics::PhysicsEngine;
 use crate::renderer::Renderer;
+use crate::tractor::TractorSystem;
 use crate::ui::settings_dlg::SettingsDialogHandle;
 use crate::weather::WeatherSystem;
 use crate::window_tracker::WindowTracker;
@@ -23,6 +24,7 @@ pub struct App {
     weather: WeatherSystem,
     cursor: CursorTracker,
     perf: PerformanceManager,
+    tractor: TractorSystem,
     settings: Arc<Mutex<Settings>>,
     clear_snow_requested: Arc<AtomicBool>,
     exit_requested: Arc<AtomicBool>,
@@ -57,6 +59,7 @@ impl App {
         let weather = WeatherSystem::new();
         let cursor = CursorTracker::new();
         let perf = PerformanceManager::new(target_fps);
+        let tractor = TractorSystem::new();
 
         let settings_dlg = SettingsDialogHandle::new(
             Arc::clone(&settings),
@@ -72,6 +75,7 @@ impl App {
             weather,
             cursor,
             perf,
+            tractor,
             settings,
             clear_snow_requested,
             exit_requested,
@@ -142,7 +146,7 @@ impl App {
             }
 
             if self.clear_snow_requested.swap(false, Ordering::SeqCst) {
-                self.accumulation.clear_all();
+                self.tractor.trigger_manual(&self.accumulation);
             }
 
             if self.particles.max_particles != current_settings.snowflake_count {
@@ -201,6 +205,7 @@ impl App {
                 &self.weather,
                 &self.cursor,
                 &mut self.window_tracker,
+                &mut self.tractor,
                 &current_settings,
                 screen_w,
                 screen_h,
@@ -212,6 +217,7 @@ impl App {
                 &self.particles,
                 &self.accumulation,
                 &self.window_tracker,
+                &self.tractor,
                 &current_settings,
             );
 

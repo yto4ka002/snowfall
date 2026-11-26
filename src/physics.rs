@@ -2,6 +2,7 @@ use crate::accumulation::AccumulationSystem;
 use crate::config::Settings;
 use crate::cursor::CursorTracker;
 use crate::particle::{DebrisKind, FlakeType, ParticleSystem};
+use crate::tractor::TractorSystem;
 use crate::weather::WeatherSystem;
 use crate::window_tracker::WindowTracker;
 
@@ -14,6 +15,7 @@ impl PhysicsEngine {
         weather: &WeatherSystem,
         cursor: &CursorTracker,
         window_tracker: &mut WindowTracker,
+        tractor: &mut TractorSystem,
         settings: &Settings,
         screen_w: f32,
         screen_h: f32,
@@ -51,6 +53,14 @@ impl PhysicsEngine {
         if settings.snow_accumulation && weather.is_strong_gust {
             accumulation.erode_gust_dust(weather.current_wind_x, debris_buf);
         }
+
+        // 1d. Snowplow Tractor automatic patrol (every 2-3 min) and manual clearing
+        tractor.update(
+            dt,
+            settings.auto_tractor && settings.snow_accumulation,
+            accumulation,
+            debris_buf,
+        );
 
         // Spawn shed debris particles into the dedicated debris pool
         for &(x, y, vx, vy, kind, size_override, source_id) in debris_buf.iter() {
