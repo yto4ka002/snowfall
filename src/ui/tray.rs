@@ -14,7 +14,7 @@ pub const ID_TRAY_EXIT: usize = 1004;
 pub struct TrayIcon {
     pub hwnd: HWND,
     nid: NOTIFYICONDATAW,
-    hicon: HICON,
+    pub hicon: HICON,
 }
 
 impl TrayIcon {

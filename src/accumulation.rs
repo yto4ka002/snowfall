@@ -358,4 +358,100 @@ impl AccumulationSystem {
             }
         }
     }
+
+    pub fn brush_at_cursor(
+        &mut self,
+        cx: f32,
+        cy: f32,
+        vx: f32,
+        vy: f32,
+        debris_out: &mut Vec<(f32, f32, f32, f32, DebrisKind, Option<f32>, isize)>,
+    ) {
+        let mut rng = rand::thread_rng();
+        let brush_radius = 16.0f32;
+        let max_spawn = 6usize;
+        let mut spawned = 0usize;
+
+        for shelf in self.shelves.values_mut() {
+            if cx < shelf.x1 - brush_radius || cx > shelf.x2 + brush_radius {
+                continue;
+            }
+            if cy < shelf.base_y - shelf.max_height - 12.0 || cy > shelf.base_y + 10.0 {
+                continue;
+            }
+
+            let start_col = (((cx - brush_radius - shelf.x1) / COLUMN_WIDTH).floor() as isize).max(0) as usize;
+            let end_col = (((cx + brush_radius - shelf.x1) / COLUMN_WIDTH).ceil() as isize)
+                .min(shelf.heights.len() as isize - 1)
+                .max(0) as usize;
+
+            for i in start_col..=end_col {
+                let h = shelf.heights[i];
+                if h >= 1.2 && cy >= shelf.base_y - h - 10.0 {
+                    let col_x = shelf.x1 + i as f32 * COLUMN_WIDTH + COLUMN_WIDTH * 0.5;
+                    let dist = (col_x - cx).abs();
+                    if dist <= brush_radius {
+                        let falloff = 1.0 - dist / brush_radius;
+                        let removed = (h * 0.28 * falloff).min(h - 0.4);
+                        if removed > 0.2 {
+                            shelf.heights[i] -= removed;
+                            if spawned < max_spawn && rng.gen_bool(0.45) {
+                                let kind = if removed > 2.5 {
+                                    DebrisKind::MediumPellet
+                                } else {
+                                    DebrisKind::PowderDust
+                                };
+                                let pvx = vx * 0.25 + rng.gen_range(-40.0..40.0);
+                                let pvy = vy * 0.15 - rng.gen_range(25.0..75.0);
+                                debris_out.push((
+                                    col_x,
+                                    shelf.base_y - h * 0.7,
+                                    pvx,
+                                    pvy,
+                                    kind,
+                                    Some(rng.gen_range(2.5..5.5)),
+                                    shelf.id,
+                                ));
+                                spawned += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn erode_gust_dust(
+        &mut self,
+        wind_x: f32,
+        debris_out: &mut Vec<(f32, f32, f32, f32, DebrisKind, Option<f32>, isize)>,
+    ) {
+        if self.shelves.is_empty() {
+            return;
+        }
+        let mut rng = rand::thread_rng();
+        let mut spawned = 0usize;
+        for shelf in self.shelves.values_mut() {
+            if spawned >= 2 || shelf.heights.len() < 4 {
+                break;
+            }
+            let idx = rng.gen_range(1..shelf.heights.len() - 1);
+            let h = shelf.heights[idx];
+            if h >= 9.0 && rng.gen_bool(0.25) {
+                shelf.heights[idx] = (h - 0.35).max(0.0);
+                let px = shelf.x1 + idx as f32 * COLUMN_WIDTH;
+                let py = shelf.base_y - h;
+                debris_out.push((
+                    px,
+                    py,
+                    wind_x * 0.85 + rng.gen_range(-20.0..20.0),
+                    rng.gen_range(-35.0..-5.0),
+                    DebrisKind::PowderDust,
+                    Some(rng.gen_range(2.2..4.2)),
+                    shelf.id,
+                ));
+                spawned += 1;
+            }
+        }
+    }
 }

@@ -18,9 +18,11 @@ impl PhysicsEngine {
         screen_w: f32,
         screen_h: f32,
         dt: f32,
+        debris_buf: &mut Vec<(f32, f32, f32, f32, DebrisKind, Option<f32>, isize)>,
     ) {
+        debris_buf.clear();
+
         // 1. Process window shake events and generate realistic debris bursts
-        let mut shake_debris = Vec::new();
         for record in window_tracker.tracked_windows.values_mut() {
             if record.shake_triggered {
                 if let Some(shelf) = accumulation.shelves.get_mut(&record.hwnd) {
@@ -28,14 +30,30 @@ impl PhysicsEngine {
                         record.shake_intensity,
                         record.shake_velocity_x,
                         record.shake_velocity_y,
-                        &mut shake_debris,
+                        debris_buf,
                     );
                 }
             }
         }
 
+        // 1b. Interactive cursor brushing across snow-covered window ledges
+        if settings.cursor_interaction && settings.snow_accumulation && cursor.speed > 550.0 {
+            accumulation.brush_at_cursor(
+                cursor.pos_x,
+                cursor.pos_y,
+                cursor.vel_x,
+                cursor.vel_y,
+                debris_buf,
+            );
+        }
+
+        // 1c. Blow fine powder wisps off tall snow peaks during strong wind gusts
+        if settings.snow_accumulation && weather.is_strong_gust {
+            accumulation.erode_gust_dust(weather.current_wind_x, debris_buf);
+        }
+
         // Spawn shed debris particles into the dedicated debris pool
-        for (x, y, vx, vy, kind, size_override, source_id) in shake_debris {
+        for &(x, y, vx, vy, kind, size_override, source_id) in debris_buf.iter() {
             particles.spawn_debris_particle(x, y, vx, vy, kind, size_override, source_id);
         }
 

@@ -1,7 +1,7 @@
 use crate::accumulation::AccumulationSystem;
 use crate::config::Settings;
 use crate::cursor::CursorTracker;
-use crate::particle::ParticleSystem;
+use crate::particle::{DebrisKind, ParticleSystem};
 use crate::performance::PerformanceManager;
 use crate::physics::PhysicsEngine;
 use crate::renderer::Renderer;
@@ -29,6 +29,8 @@ pub struct App {
     #[allow(dead_code)]
     settings_dlg: SettingsDialogHandle,
     last_resize_check: Instant,
+    segments_buf: Vec<(isize, f32, f32, f32)>,
+    debris_buf: Vec<(f32, f32, f32, f32, DebrisKind, Option<f32>, isize)>,
 }
 
 impl App {
@@ -75,6 +77,8 @@ impl App {
             exit_requested,
             settings_dlg,
             last_resize_check: Instant::now(),
+            segments_buf: Vec::with_capacity(64),
+            debris_buf: Vec::with_capacity(256),
         })
     }
 
@@ -185,13 +189,11 @@ impl App {
             self.window_tracker
                 .update(current_settings.shake_sensitivity);
 
-            let segments: Vec<(isize, f32, f32, f32)> = self
-                .window_tracker
-                .all_visible_surfaces
-                .iter()
-                .map(|s| (s.hwnd, s.x1, s.x2, s.y))
-                .collect();
-            self.accumulation.sync_with_windows(&segments);
+            self.segments_buf.clear();
+            for s in &self.window_tracker.all_visible_surfaces {
+                self.segments_buf.push((s.hwnd, s.x1, s.x2, s.y));
+            }
+            self.accumulation.sync_with_windows(&self.segments_buf);
 
             PhysicsEngine::update(
                 &mut self.particles,
@@ -203,6 +205,7 @@ impl App {
                 screen_w,
                 screen_h,
                 dt,
+                &mut self.debris_buf,
             );
 
             let _ = self.renderer.render(

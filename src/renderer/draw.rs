@@ -43,7 +43,7 @@ impl DrawEngine {
         virt_y: f32,
     ) -> Result<()> {
         unsafe {
-            let identity = Matrix3x2::identity();
+            let mut transform_dirty = false;
 
             for p in &particles.particles {
                 if !p.active {
@@ -86,25 +86,24 @@ impl DrawEngine {
                     let rot_deg = p.rotation.to_degrees();
                     let rot_mat = Matrix3x2::rotation_around(rot_deg, Vector2 { X: rx, Y: ry });
                     dc.SetTransform(&rot_mat);
-                    dc.DrawBitmap(
-                        sprite,
-                        Some(&dest_rect),
-                        p.opacity,
-                        D2D1_INTERPOLATION_MODE_LINEAR,
-                        None,
-                        None,
-                    );
-                    dc.SetTransform(&identity);
-                } else {
-                    dc.DrawBitmap(
-                        sprite,
-                        Some(&dest_rect),
-                        p.opacity,
-                        D2D1_INTERPOLATION_MODE_LINEAR,
-                        None,
-                        None,
-                    );
+                    transform_dirty = true;
+                } else if transform_dirty {
+                    dc.SetTransform(&Matrix3x2::identity());
+                    transform_dirty = false;
                 }
+
+                dc.DrawBitmap(
+                    sprite,
+                    Some(&dest_rect),
+                    p.opacity,
+                    D2D1_INTERPOLATION_MODE_LINEAR,
+                    None,
+                    None,
+                );
+            }
+
+            if transform_dirty {
+                dc.SetTransform(&Matrix3x2::identity());
             }
         }
         Ok(())
@@ -118,7 +117,7 @@ impl DrawEngine {
         virt_y: f32,
     ) -> Result<()> {
         unsafe {
-            let identity = Matrix3x2::identity();
+            let mut transform_dirty = false;
 
             for d in debris {
                 if !d.active {
@@ -146,25 +145,24 @@ impl DrawEngine {
                     let rot_deg = d.rotation.to_degrees();
                     let rot_mat = Matrix3x2::rotation_around(rot_deg, Vector2 { X: rx, Y: ry });
                     dc.SetTransform(&rot_mat);
-                    dc.DrawBitmap(
-                        sprite,
-                        Some(&dest_rect),
-                        d.opacity,
-                        D2D1_INTERPOLATION_MODE_LINEAR,
-                        None,
-                        None,
-                    );
-                    dc.SetTransform(&identity);
-                } else {
-                    dc.DrawBitmap(
-                        sprite,
-                        Some(&dest_rect),
-                        d.opacity,
-                        D2D1_INTERPOLATION_MODE_LINEAR,
-                        None,
-                        None,
-                    );
+                    transform_dirty = true;
+                } else if transform_dirty {
+                    dc.SetTransform(&Matrix3x2::identity());
+                    transform_dirty = false;
                 }
+
+                dc.DrawBitmap(
+                    sprite,
+                    Some(&dest_rect),
+                    d.opacity,
+                    D2D1_INTERPOLATION_MODE_LINEAR,
+                    None,
+                    None,
+                );
+            }
+
+            if transform_dirty {
+                dc.SetTransform(&Matrix3x2::identity());
             }
         }
         Ok(())
@@ -254,23 +252,35 @@ impl DrawEngine {
                 Y: start_pt_y,
             });
 
-            // Smooth upper contour across columns in this mound
+            // Smooth upper contour using midpoint Quadratic Beziers
+            let mut prev_x = start_pt_x;
+            let mut prev_y = start_pt_y;
             for i in (start + 1)..=end {
-                let px = sx1 + i as f32 * COLUMN_WIDTH + COLUMN_WIDTH * 0.5;
-                let py = base_y - shelf.heights[i];
-                sink.AddLine(Vector2 { X: px, Y: py });
+                let cur_x = sx1 + i as f32 * COLUMN_WIDTH + COLUMN_WIDTH * 0.5;
+                let cur_y = base_y - shelf.heights[i];
+                let mid_x = (prev_x + cur_x) * 0.5;
+                let mid_y = (prev_y + cur_y) * 0.5;
+                sink.AddQuadraticBezier(&D2D1_QUADRATIC_BEZIER_SEGMENT {
+                    point1: Vector2 { X: prev_x, Y: prev_y },
+                    point2: Vector2 { X: mid_x, Y: mid_y },
+                });
+                prev_x = cur_x;
+                prev_y = cur_y;
             }
+            sink.AddLine(Vector2 { X: prev_x, Y: prev_y });
 
             // Right slope: smoothly transition down to base_y
             let end_pt_x = sx1 + end as f32 * COLUMN_WIDTH + COLUMN_WIDTH * 0.5;
             let end_pt_y = base_y - shelf.heights[end];
-            sink.AddLine(Vector2 {
-                X: (end_pt_x + right_anchor_x) * 0.5,
-                Y: (base_y + end_pt_y) * 0.5,
-            });
-            sink.AddLine(Vector2 {
-                X: right_anchor_x,
-                Y: base_y,
+            sink.AddQuadraticBezier(&D2D1_QUADRATIC_BEZIER_SEGMENT {
+                point1: Vector2 {
+                    X: (end_pt_x + right_anchor_x) * 0.5,
+                    Y: (base_y + end_pt_y) * 0.5,
+                },
+                point2: Vector2 {
+                    X: right_anchor_x,
+                    Y: base_y,
+                },
             });
 
             // Close figure along the bottom ledge
@@ -283,6 +293,23 @@ impl DrawEngine {
 
             // Fill with soft snow mound brush
             dc.FillGeometry(&fill_geo, &resources.mound_fill_brush, None);
+
+            // Subtle cool shadow along the bottom contact ledge for 3D volume
+            if peak_h >= 3.5 {
+                dc.DrawLine(
+                    Vector2 {
+                        X: left_anchor_x + 2.0,
+                        Y: base_y - 0.5,
+                    },
+                    Vector2 {
+                        X: right_anchor_x - 2.0,
+                        Y: base_y - 0.5,
+                    },
+                    &resources.mound_shadow_brush,
+                    1.2,
+                    None,
+                );
+            }
 
             // Soft frosty highlight on top crest ONLY if snow is thick enough (>= 1.6 px)
             if peak_h >= 1.6 {
@@ -297,16 +324,26 @@ impl DrawEngine {
                     D2D1_FIGURE_BEGIN_HOLLOW,
                 );
 
+                let mut c_prev_x = start_pt_x;
+                let mut c_prev_y = start_pt_y;
                 for i in (start + 1)..=end {
-                    let px = sx1 + i as f32 * COLUMN_WIDTH + COLUMN_WIDTH * 0.5;
-                    let py = base_y - shelf.heights[i];
-                    crust_sink.AddLine(Vector2 { X: px, Y: py });
+                    let cur_x = sx1 + i as f32 * COLUMN_WIDTH + COLUMN_WIDTH * 0.5;
+                    let cur_y = base_y - shelf.heights[i];
+                    let mid_x = (c_prev_x + cur_x) * 0.5;
+                    let mid_y = (c_prev_y + cur_y) * 0.5;
+                    crust_sink.AddQuadraticBezier(&D2D1_QUADRATIC_BEZIER_SEGMENT {
+                        point1: Vector2 { X: c_prev_x, Y: c_prev_y },
+                        point2: Vector2 { X: mid_x, Y: mid_y },
+                    });
+                    c_prev_x = cur_x;
+                    c_prev_y = cur_y;
                 }
+                crust_sink.AddLine(Vector2 { X: c_prev_x, Y: c_prev_y });
 
                 crust_sink.EndFigure(D2D1_FIGURE_END_OPEN);
                 crust_sink.Close()?;
 
-                dc.DrawGeometry(&crust_geo, &resources.mound_highlight_brush, 0.85, None);
+                dc.DrawGeometry(&crust_geo, &resources.mound_highlight_brush, 0.9, None);
             }
 
             // Fluffy powder puffs on local peaks for thick snow caps (>= 3.0 px)

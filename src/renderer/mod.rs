@@ -15,6 +15,7 @@ pub struct Renderer {
     pub overlay: OverlayWindow,
     pub context: RenderContext,
     pub resources: RenderResources,
+    occluders_buf: Vec<(f32, f32, f32, f32)>,
 }
 
 impl Renderer {
@@ -31,6 +32,7 @@ impl Renderer {
             overlay,
             context,
             resources,
+            occluders_buf: Vec::with_capacity(32),
         })
     }
 
@@ -51,21 +53,17 @@ impl Renderer {
     ) -> Result<()> {
         self.context.begin_draw();
 
+        self.occluders_buf.clear();
         let occluders = if !settings.snow_over_windows {
-            Some(
-                window_tracker
-                    .tracked_windows
-                    .values()
-                    .map(|r| {
-                        (
-                            r.rect.left as f32,
-                            r.rect.right as f32,
-                            r.rect.top as f32 + 4.0,
-                            r.rect.bottom as f32,
-                        )
-                    })
-                    .collect::<Vec<_>>(),
-            )
+            for r in window_tracker.tracked_windows.values() {
+                self.occluders_buf.push((
+                    r.rect.left as f32,
+                    r.rect.right as f32,
+                    r.rect.top as f32 + 4.0,
+                    r.rect.bottom as f32,
+                ));
+            }
+            Some(self.occluders_buf.as_slice())
         } else {
             None
         };
@@ -75,7 +73,7 @@ impl Renderer {
             &self.resources,
             particles,
             accumulation,
-            occluders.as_deref(),
+            occluders,
             self.overlay.x as f32,
             self.overlay.y as f32,
         )?;

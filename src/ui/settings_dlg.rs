@@ -40,6 +40,9 @@ pub const ID_RADIO_30FPS: usize = 231;
 pub const ID_BTN_CLEAR_SNOW: usize = 240;
 pub const ID_BTN_RESET_DEFAULTS: usize = 241;
 pub const ID_BTN_MINIMIZE_TRAY: usize = 242;
+pub const ID_BTN_PRESET_LIGHT: usize = 243;
+pub const ID_BTN_PRESET_NORMAL: usize = 244;
+pub const ID_BTN_PRESET_BLIZZARD: usize = 245;
 
 // Trackbar messages
 const TBM_SETRANGE: u32 = WM_USER + 6;
@@ -128,6 +131,36 @@ unsafe extern "system" fn settings_wndproc(
                 }
                 ID_BTN_RESET_DEFAULTS => {
                     dlg.reset_to_defaults();
+                }
+                ID_BTN_PRESET_LIGHT => {
+                    {
+                        let mut s = dlg.settings.lock().unwrap();
+                        s.snowflake_count = 200;
+                        s.fall_speed = 0.7;
+                        s.wind_intensity = 0.5;
+                        s.max_accumulation_height = 14.0;
+                    }
+                    dlg.sync_controls_from_settings();
+                }
+                ID_BTN_PRESET_NORMAL => {
+                    {
+                        let mut s = dlg.settings.lock().unwrap();
+                        s.snowflake_count = 450;
+                        s.fall_speed = 1.0;
+                        s.wind_intensity = 1.0;
+                        s.max_accumulation_height = 24.0;
+                    }
+                    dlg.sync_controls_from_settings();
+                }
+                ID_BTN_PRESET_BLIZZARD => {
+                    {
+                        let mut s = dlg.settings.lock().unwrap();
+                        s.snowflake_count = 1150;
+                        s.fall_speed = 1.6;
+                        s.wind_intensity = 2.4;
+                        s.max_accumulation_height = 40.0;
+                    }
+                    dlg.sync_controls_from_settings();
                 }
                 ID_BTN_MINIMIZE_TRAY => {
                     let _ = ShowWindow(hwnd, SW_HIDE);
@@ -238,7 +271,7 @@ impl SettingsDialogHandle {
                     let sw = GetSystemMetrics(SM_CXSCREEN);
                     let sh = GetSystemMetrics(SM_CYSCREEN);
                     let win_w = 475;
-                    let win_h = 660;
+                    let win_h = 695;
                     let win_x = (sw - win_w) / 2;
                     let win_y = (sh - win_h) / 2;
 
@@ -260,7 +293,13 @@ impl SettingsDialogHandle {
 
                     hwnd_store_clone.store(hwnd.0 as isize, Ordering::SeqCst);
 
-                    let tray = Some(TrayIcon::new(hwnd));
+                    let tray_icon = TrayIcon::new(hwnd);
+                    let hicon_raw = tray_icon.hicon.0 as isize;
+                    if hicon_raw != 0 {
+                        let _ = SendMessageW(hwnd, WM_SETICON, Some(WPARAM(0)), Some(LPARAM(hicon_raw)));
+                        let _ = SendMessageW(hwnd, WM_SETICON, Some(WPARAM(1)), Some(LPARAM(hicon_raw)));
+                    }
+                    let tray = Some(tray_icon);
 
                     let boxed = Box::new(SettingsDialog {
                         hwnd,
@@ -327,45 +366,49 @@ impl SettingsDialog {
         self.create_button(h, instance, w!("⏸ Остановить снегопад"), 20, 42, 230, 40, ID_BTN_TOGGLE_RUNNING);
         self.create_button(h, instance, w!("⏻ Закрыть программу"), 258, 42, 192, 40, ID_BTN_EXIT_APP);
 
-        // 3. Quick Actions
+        // 3. Quick Actions & Weather Presets
         self.create_button(h, instance, w!("🧹 Смахнуть снег с окон"), 20, 90, 220, 28, ID_BTN_CLEAR_SNOW);
         self.create_button(h, instance, w!("↺ Сбросить настройки"), 248, 90, 202, 28, ID_BTN_RESET_DEFAULTS);
 
-        // 4. Sliders (start at y=130)
-        self.create_label(h, instance, w!("Количество снежинок:"), 20, 130, 220, 18, 0);
-        self.create_label(h, instance, w!("450"), 365, 130, 85, 18, ID_LABEL_COUNT);
-        self.create_slider(h, instance, 20, 149, 430, 26, ID_SLIDER_COUNT);
+        self.create_button(h, instance, w!("❄ Лёгкий снег"), 20, 124, 138, 26, ID_BTN_PRESET_LIGHT);
+        self.create_button(h, instance, w!("🌨 Снегопад"), 166, 124, 138, 26, ID_BTN_PRESET_NORMAL);
+        self.create_button(h, instance, w!("🌪 Метель"), 312, 124, 138, 26, ID_BTN_PRESET_BLIZZARD);
 
-        self.create_label(h, instance, w!("Скорость падения:"), 20, 180, 220, 18, 0);
-        self.create_label(h, instance, w!("1.0x"), 365, 180, 85, 18, ID_LABEL_SPEED);
-        self.create_slider(h, instance, 20, 199, 430, 26, ID_SLIDER_SPEED);
+        // 4. Sliders (start at y=164)
+        self.create_label(h, instance, w!("Количество снежинок:"), 20, 164, 220, 18, 0);
+        self.create_label(h, instance, w!("450"), 365, 164, 85, 18, ID_LABEL_COUNT);
+        self.create_slider(h, instance, 20, 183, 430, 26, ID_SLIDER_COUNT);
 
-        self.create_label(h, instance, w!("Сила ветра:"), 20, 230, 220, 18, 0);
-        self.create_label(h, instance, w!("1.0x"), 365, 230, 85, 18, ID_LABEL_WIND);
-        self.create_slider(h, instance, 20, 249, 430, 26, ID_SLIDER_WIND);
+        self.create_label(h, instance, w!("Скорость падения:"), 20, 214, 220, 18, 0);
+        self.create_label(h, instance, w!("1.0x"), 365, 214, 85, 18, ID_LABEL_SPEED);
+        self.create_slider(h, instance, 20, 233, 430, 26, ID_SLIDER_SPEED);
 
-        self.create_label(h, instance, w!("Толщина снежной шапки на окнах:"), 20, 280, 260, 18, 0);
-        self.create_label(h, instance, w!("24 px"), 365, 280, 85, 18, ID_LABEL_DEPTH);
-        self.create_slider(h, instance, 20, 299, 430, 26, ID_SLIDER_DEPTH);
+        self.create_label(h, instance, w!("Сила ветра:"), 20, 264, 220, 18, 0);
+        self.create_label(h, instance, w!("1.0x"), 365, 264, 85, 18, ID_LABEL_WIND);
+        self.create_slider(h, instance, 20, 283, 430, 26, ID_SLIDER_WIND);
 
-        self.create_label(h, instance, w!("Чувствительность стряхивания окон:"), 20, 330, 260, 18, 0);
-        self.create_label(h, instance, w!("Обычная"), 365, 330, 85, 18, ID_LABEL_SHAKE);
-        self.create_slider(h, instance, 20, 349, 430, 26, ID_SLIDER_SHAKE);
+        self.create_label(h, instance, w!("Толщина снежной шапки на окнах:"), 20, 314, 260, 18, 0);
+        self.create_label(h, instance, w!("24 px"), 365, 314, 85, 18, ID_LABEL_DEPTH);
+        self.create_slider(h, instance, 20, 333, 430, 26, ID_SLIDER_DEPTH);
 
-        // 5. Checkboxes (start at y=388)
-        self.create_checkbox(h, instance, w!("Снегопад поверх окон приложений"), 25, 388, 380, 22, ID_CHECK_SNOW_OVER_WINDOWS);
-        self.create_checkbox(h, instance, w!("Накапливать снежные шапки на окнах"), 25, 412, 380, 22, ID_CHECK_ACCUMULATION);
-        self.create_checkbox(h, instance, w!("Реакция снега на курсор мыши (завихрения)"), 25, 436, 380, 22, ID_CHECK_CURSOR);
-        self.create_checkbox(h, instance, w!("Пауза в полноэкранных играх и видео"), 25, 460, 380, 22, ID_CHECK_FULLSCREEN);
-        self.create_checkbox(h, instance, w!("Запускать автоматически с Windows"), 25, 484, 380, 22, ID_CHECK_AUTOSTART);
+        self.create_label(h, instance, w!("Чувствительность стряхивания окон:"), 20, 364, 260, 18, 0);
+        self.create_label(h, instance, w!("Обычная"), 365, 364, 85, 18, ID_LABEL_SHAKE);
+        self.create_slider(h, instance, 20, 383, 430, 26, ID_SLIDER_SHAKE);
 
-        // 6. Frame Rate (y=516)
-        self.create_label(h, instance, w!("Режим плавности:"), 25, 518, 140, 20, 0);
-        self.create_radio(h, instance, w!("60 FPS (Плавно)"), 170, 516, 125, 22, ID_RADIO_60FPS);
-        self.create_radio(h, instance, w!("30 FPS (Экономия)"), 300, 516, 140, 22, ID_RADIO_30FPS);
+        // 5. Checkboxes (start at y=422)
+        self.create_checkbox(h, instance, w!("Снегопад поверх окон приложений"), 25, 422, 380, 22, ID_CHECK_SNOW_OVER_WINDOWS);
+        self.create_checkbox(h, instance, w!("Накапливать снежные шапки на окнах"), 25, 446, 380, 22, ID_CHECK_ACCUMULATION);
+        self.create_checkbox(h, instance, w!("Реакция снега на курсор мыши (завихрения)"), 25, 470, 380, 22, ID_CHECK_CURSOR);
+        self.create_checkbox(h, instance, w!("Пауза в полноэкранных играх и видео"), 25, 494, 380, 22, ID_CHECK_FULLSCREEN);
+        self.create_checkbox(h, instance, w!("Запускать автоматически с Windows"), 25, 518, 380, 22, ID_CHECK_AUTOSTART);
 
-        // 7. Bottom Tray Button (y=556)
-        self.create_button(h, instance, w!("Свернуть окно в системный трей (фоновый режим)"), 20, 556, 430, 34, ID_BTN_MINIMIZE_TRAY);
+        // 6. Frame Rate (y=550)
+        self.create_label(h, instance, w!("Режим плавности:"), 25, 552, 140, 20, 0);
+        self.create_radio(h, instance, w!("60 FPS (Плавно)"), 170, 550, 125, 22, ID_RADIO_60FPS);
+        self.create_radio(h, instance, w!("30 FPS (Экономия)"), 300, 550, 140, 22, ID_RADIO_30FPS);
+
+        // 7. Bottom Tray Button (y=590)
+        self.create_button(h, instance, w!("Свернуть окно в системный трей (фоновый режим)"), 20, 590, 430, 34, ID_BTN_MINIMIZE_TRAY);
     }
 
     unsafe fn create_label(

@@ -47,10 +47,10 @@ Unlike static desktop wallpapers or heavy Electron/web overlays, Snowfall featur
 - **Zero-Allocation Particle Pool**: Reuses pre-allocated memory buffers for rock-solid frametimes without garbage collection spikes.
 
 ### 🏔️ 3. Physical Snow Accumulation on Windows
-- **Continuous Height-Field Terrain**: Snow builds up realistically on the top edges of open windows with a continuous 4px grid profile — no artificial flat rectangles.
+- **Silky-Smooth Quadratic Bezier Contours**: Snow mounds are rendered using midpoint-interpolated Quadratic Beziers (`AddQuadraticBezier`) for organic, pillowy curves instead of jagged polygons.
+- **3D Volume & Frost Rim**: Soft cool-toned underside contact shading on thick mounds paired with a glistening frost highlight crest.
 - **Windows 11 Rounded Corners Adaptation**: Automatically queries DWM window states (`IsZoomed`). For non-maximized windows, snow shelves seamlessly inset by 10 px with smooth boundary tapering, preventing snow from unnaturally hanging in mid-air over curved window corners.
 - **Angle of Repose & Diffusion**: Snow naturally flows from sharp peaks down into crevices and tapers off at window edges.
-- **Two-Layer Rendering**: Soft, cold-toned snow bodies topped with crisp, glistening frosty crests.
 - **Window Movement Synchronization**: Smoothly translates accumulated snow together with the window as you drag it across your desktop.
 
 ### 🌪️ 4. Window Aero Shake & Snow Shedding Mechanics
@@ -68,11 +68,12 @@ Unlike static desktop wallpapers or heavy Electron/web overlays, Snowfall featur
 - **Smart Filtering**: Automatically ignores Windows shell components (Taskbar, Start Menu, virtual desktop surfaces, and invisible background processes).
 
 ### 💨 6. Dynamic Wind & Cursor Aerodynamics
-- **Drifting Wind & Squalls**: Continuous shifting wind with smooth bell-curve gusts.
-- **Mouse Vortices**: Moving the cursor through the snowfall generates aerodynamic air vortices (radial push + tangential swirl) that naturally deflect falling snowflakes.
+- **Drifting Wind & Squalls**: Continuous shifting wind with smooth bell-curve gusts. Strong gusts gently blow fine snow powder wisps off tall snow peaks.
+- **Mouse Vortices & Snow Brushing**: Moving the cursor through the snowfall generates aerodynamic air vortices (radial push + tangential swirl) that naturally deflect falling snowflakes, while fast sweeps across snow-covered window ledges brush snow off in real time.
 
 ### ⚡ 7. Decoupled UI & Extreme Optimization
-- **Multithreaded UI Architecture**: The Control Center window and System Tray run on their own isolated Win32 thread (`SnowfallUIThread`). Moving or dragging the settings dialog **never halts** the Direct2D rendering pipeline.
+- **Multithreaded UI Architecture**: The Control Center window (complete with 1-click **Light Snow / Classic / Blizzard** weather presets and custom snowflake titlebar icon) and System Tray run on their own isolated Win32 thread (`SnowfallUIThread`). Moving or dragging the settings dialog **never halts** the Direct2D rendering pipeline.
+- **Zero-Allocation Hot Loop**: Reusable frame buffers and batched Direct2D transforms eliminate per-frame heap allocations for rock-solid 60 FPS frametimes.
 - **Auto-Pause in Fullscreen**: Automatically enters deep pause when full-screen 3D games or videos are detected, dropping CPU and GPU usage to zero.
 - **Power-Saving Modes**: Switchable between buttery-smooth 60 FPS and energy-efficient 30 FPS.
 - **Tiny Footprint**: Only **~490 KB** executable size with zero runtime dependencies.
