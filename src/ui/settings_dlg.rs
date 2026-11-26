@@ -27,6 +27,8 @@ pub const ID_SLIDER_DEPTH: usize = 207;
 pub const ID_LABEL_DEPTH: usize = 208;
 pub const ID_SLIDER_SHAKE: usize = 209;
 pub const ID_LABEL_SHAKE: usize = 210;
+pub const ID_SLIDER_ACCUM_TRANSPARENCY: usize = 211;
+pub const ID_LABEL_ACCUM_TRANSPARENCY: usize = 212;
 
 pub const ID_CHECK_ACCUMULATION: usize = 221;
 pub const ID_CHECK_CURSOR: usize = 222;
@@ -273,7 +275,7 @@ impl SettingsDialogHandle {
                     let sw = GetSystemMetrics(SM_CXSCREEN);
                     let sh = GetSystemMetrics(SM_CYSCREEN);
                     let win_w = 475;
-                    let win_h = 720;
+                    let win_h = 715;
                     let win_x = (sw - win_w) / 2;
                     let win_y = (sh - win_h) / 2;
 
@@ -376,42 +378,46 @@ impl SettingsDialog {
         self.create_button(h, instance, w!("🌨 Снегопад"), 166, 124, 138, 26, ID_BTN_PRESET_NORMAL);
         self.create_button(h, instance, w!("🌪 Метель"), 312, 124, 138, 26, ID_BTN_PRESET_BLIZZARD);
 
-        // 4. Sliders (start at y=164)
-        self.create_label(h, instance, w!("Количество снежинок:"), 20, 164, 220, 18, 0);
-        self.create_label(h, instance, w!("450"), 365, 164, 85, 18, ID_LABEL_COUNT);
-        self.create_slider(h, instance, 20, 183, 430, 26, ID_SLIDER_COUNT);
+        // 4. Sliders (start at y=158, 44px per row)
+        self.create_label(h, instance, w!("Количество снежинок:"), 20, 158, 220, 18, 0);
+        self.create_label(h, instance, w!("450"), 365, 158, 85, 18, ID_LABEL_COUNT);
+        self.create_slider(h, instance, 20, 175, 430, 24, ID_SLIDER_COUNT);
 
-        self.create_label(h, instance, w!("Скорость падения:"), 20, 214, 220, 18, 0);
-        self.create_label(h, instance, w!("1.0x"), 365, 214, 85, 18, ID_LABEL_SPEED);
-        self.create_slider(h, instance, 20, 233, 430, 26, ID_SLIDER_SPEED);
+        self.create_label(h, instance, w!("Скорость падения:"), 20, 202, 220, 18, 0);
+        self.create_label(h, instance, w!("1.0x"), 365, 202, 85, 18, ID_LABEL_SPEED);
+        self.create_slider(h, instance, 20, 219, 430, 24, ID_SLIDER_SPEED);
 
-        self.create_label(h, instance, w!("Сила ветра:"), 20, 264, 220, 18, 0);
-        self.create_label(h, instance, w!("1.0x"), 365, 264, 85, 18, ID_LABEL_WIND);
-        self.create_slider(h, instance, 20, 283, 430, 26, ID_SLIDER_WIND);
+        self.create_label(h, instance, w!("Сила ветра:"), 20, 246, 220, 18, 0);
+        self.create_label(h, instance, w!("1.0x"), 365, 246, 85, 18, ID_LABEL_WIND);
+        self.create_slider(h, instance, 20, 263, 430, 24, ID_SLIDER_WIND);
 
-        self.create_label(h, instance, w!("Толщина снежной шапки на окнах:"), 20, 314, 260, 18, 0);
-        self.create_label(h, instance, w!("24 px"), 365, 314, 85, 18, ID_LABEL_DEPTH);
-        self.create_slider(h, instance, 20, 333, 430, 26, ID_SLIDER_DEPTH);
+        self.create_label(h, instance, w!("Толщина снежной шапки на окнах:"), 20, 290, 260, 18, 0);
+        self.create_label(h, instance, w!("24 px"), 365, 290, 85, 18, ID_LABEL_DEPTH);
+        self.create_slider(h, instance, 20, 307, 430, 24, ID_SLIDER_DEPTH);
 
-        self.create_label(h, instance, w!("Чувствительность стряхивания окон:"), 20, 364, 260, 18, 0);
-        self.create_label(h, instance, w!("Обычная"), 365, 364, 85, 18, ID_LABEL_SHAKE);
-        self.create_slider(h, instance, 20, 383, 430, 26, ID_SLIDER_SHAKE);
+        self.create_label(h, instance, w!("Прозрачность накопленного снега:"), 20, 334, 260, 18, 0);
+        self.create_label(h, instance, w!("0%"), 365, 334, 85, 18, ID_LABEL_ACCUM_TRANSPARENCY);
+        self.create_slider(h, instance, 20, 351, 430, 24, ID_SLIDER_ACCUM_TRANSPARENCY);
 
-        // 5. Checkboxes (start at y=422)
-        self.create_checkbox(h, instance, w!("Снегопад поверх окон приложений"), 25, 422, 410, 22, ID_CHECK_SNOW_OVER_WINDOWS);
-        self.create_checkbox(h, instance, w!("Накапливать снежные шапки на окнах"), 25, 446, 410, 22, ID_CHECK_ACCUMULATION);
-        self.create_checkbox(h, instance, w!("Трактор убирает снег каждые 2–3 минуты"), 25, 470, 410, 22, ID_CHECK_AUTO_TRACTOR);
-        self.create_checkbox(h, instance, w!("Реакция снега на курсор мыши (завихрения)"), 25, 494, 410, 22, ID_CHECK_CURSOR);
-        self.create_checkbox(h, instance, w!("Пауза в полноэкранных играх и видео"), 25, 518, 410, 22, ID_CHECK_FULLSCREEN);
-        self.create_checkbox(h, instance, w!("Запускать автоматически с Windows"), 25, 542, 410, 22, ID_CHECK_AUTOSTART);
+        self.create_label(h, instance, w!("Чувствительность стряхивания окон:"), 20, 378, 260, 18, 0);
+        self.create_label(h, instance, w!("Обычная"), 365, 378, 85, 18, ID_LABEL_SHAKE);
+        self.create_slider(h, instance, 20, 395, 430, 24, ID_SLIDER_SHAKE);
 
-        // 6. Frame Rate (y=574)
-        self.create_label(h, instance, w!("Режим плавности:"), 25, 576, 140, 20, 0);
-        self.create_radio(h, instance, w!("60 FPS (Плавно)"), 170, 574, 125, 22, ID_RADIO_60FPS);
-        self.create_radio(h, instance, w!("30 FPS (Экономия)"), 300, 574, 140, 22, ID_RADIO_30FPS);
+        // 5. Checkboxes (start at y=430)
+        self.create_checkbox(h, instance, w!("Снегопад поверх окон приложений"), 25, 430, 410, 22, ID_CHECK_SNOW_OVER_WINDOWS);
+        self.create_checkbox(h, instance, w!("Накапливать снежные шапки на окнах"), 25, 453, 410, 22, ID_CHECK_ACCUMULATION);
+        self.create_checkbox(h, instance, w!("Трактор убирает снег каждые 2–3 минуты"), 25, 476, 410, 22, ID_CHECK_AUTO_TRACTOR);
+        self.create_checkbox(h, instance, w!("Реакция снега на курсор мыши (завихрения)"), 25, 499, 410, 22, ID_CHECK_CURSOR);
+        self.create_checkbox(h, instance, w!("Пауза в полноэкранных играх и видео"), 25, 522, 410, 22, ID_CHECK_FULLSCREEN);
+        self.create_checkbox(h, instance, w!("Запускать автоматически с Windows"), 25, 545, 410, 22, ID_CHECK_AUTOSTART);
 
-        // 7. Bottom Tray Button (y=614)
-        self.create_button(h, instance, w!("Свернуть окно в системный трей (фоновый режим)"), 20, 614, 430, 34, ID_BTN_MINIMIZE_TRAY);
+        // 6. Frame Rate (y=576)
+        self.create_label(h, instance, w!("Режим плавности:"), 25, 578, 140, 20, 0);
+        self.create_radio(h, instance, w!("60 FPS (Плавно)"), 170, 576, 125, 22, ID_RADIO_60FPS);
+        self.create_radio(h, instance, w!("30 FPS (Экономия)"), 300, 576, 140, 22, ID_RADIO_30FPS);
+
+        // 7. Bottom Tray Button (y=612)
+        self.create_button(h, instance, w!("Свернуть окно в системный трей (фоновый режим)"), 20, 612, 430, 34, ID_BTN_MINIMIZE_TRAY);
     }
 
     unsafe fn create_label(
@@ -664,6 +670,23 @@ impl SettingsDialog {
             }
             self.set_label_text(ID_LABEL_DEPTH, &format!("{:.0} px", s.max_accumulation_height));
 
+            let transp_pct = ((1.0 - s.accumulation_opacity.clamp(0.15, 1.0)) * 100.0).round() as isize;
+            if let Ok(h_transp) = GetDlgItem(Some(self.hwnd), ID_SLIDER_ACCUM_TRANSPARENCY as i32) {
+                let _ = SendMessageW(
+                    h_transp,
+                    TBM_SETRANGE,
+                    Some(WPARAM(1)),
+                    Some(LPARAM((0 | (85 << 16)) as isize)),
+                );
+                let _ = SendMessageW(
+                    h_transp,
+                    TBM_SETPOS,
+                    Some(WPARAM(1)),
+                    Some(LPARAM(transp_pct)),
+                );
+            }
+            self.set_label_text(ID_LABEL_ACCUM_TRANSPARENCY, &format!("{}%", transp_pct));
+
             if let Ok(h_shake) = GetDlgItem(Some(self.hwnd), ID_SLIDER_SHAKE as i32) {
                 let _ = SendMessageW(
                     h_shake,
@@ -754,6 +777,12 @@ impl SettingsDialog {
                 let val = SendMessageW(h, TBM_GETPOS, None, None).0 as f32;
                 s.max_accumulation_height = val;
                 self.set_label_text(ID_LABEL_DEPTH, &format!("{:.0} px", val));
+            }
+
+            if let Ok(h) = GetDlgItem(Some(self.hwnd), ID_SLIDER_ACCUM_TRANSPARENCY as i32) {
+                let pct = (SendMessageW(h, TBM_GETPOS, None, None).0 as i32).clamp(0, 85);
+                s.accumulation_opacity = (1.0 - pct as f32 / 100.0).clamp(0.15, 1.0);
+                self.set_label_text(ID_LABEL_ACCUM_TRANSPARENCY, &format!("{}%", pct));
             }
 
             if let Ok(h) = GetDlgItem(Some(self.hwnd), ID_SLIDER_SHAKE as i32) {

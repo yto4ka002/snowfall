@@ -27,10 +27,16 @@ pub struct Settings {
     pub snow_over_windows: bool,
     #[serde(default = "default_true")]
     pub auto_tractor: bool,
+    #[serde(default = "default_one")]
+    pub accumulation_opacity: f32,
 }
 
 fn default_true() -> bool {
     true
+}
+
+fn default_one() -> f32 {
+    1.0
 }
 
 impl Default for Settings {
@@ -50,6 +56,7 @@ impl Default for Settings {
             auto_start: false,
             snow_over_windows: true,
             auto_tractor: true,
+            accumulation_opacity: 1.0,
         }
     }
 }

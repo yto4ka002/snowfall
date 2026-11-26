@@ -17,6 +17,7 @@ impl DrawEngine {
         particles: &ParticleSystem,
         accumulation: &AccumulationSystem,
         tractor: &TractorSystem,
+        accumulation_opacity: f32,
         occluders: Option<&[(f32, f32, f32, f32)]>,
         virtual_x: f32,
         virtual_y: f32,
@@ -25,10 +26,18 @@ impl DrawEngine {
         let factory = &ctx.d2d_factory;
 
         // 1. Draw Accumulated Snow Mounds on application windows
-        Self::draw_shelf_mounds(dc, factory, resources, accumulation, virtual_x, virtual_y)?;
+        Self::draw_shelf_mounds(
+            dc,
+            factory,
+            resources,
+            accumulation,
+            accumulation_opacity,
+            virtual_x,
+            virtual_y,
+        )?;
 
         // 2. Draw Snowplow Tractor clearing snow along window ledges
-        Self::draw_tractor(dc, factory, resources, tractor, virtual_x, virtual_y)?;
+        Self::draw_tractor(dc, factory, resources, tractor, accumulation_opacity, virtual_x, virtual_y)?;
 
         // 3. Draw Dislodged Falling Debris (avalanche chunks, pellets, powder mist)
         Self::draw_debris(dc, resources, &particles.debris, virtual_x, virtual_y)?;
@@ -178,13 +187,21 @@ impl DrawEngine {
         factory: &ID2D1Factory1,
         resources: &RenderResources,
         accumulation: &AccumulationSystem,
+        accumulation_opacity: f32,
         virt_x: f32,
         virt_y: f32,
     ) -> Result<()> {
+        let op = accumulation_opacity.clamp(0.15, 1.0);
         unsafe {
+            resources.mound_fill_brush.SetOpacity(op);
+            resources.mound_outline_brush.SetOpacity(0.62 * op);
+            resources.mound_highlight_brush.SetOpacity(0.85 * op);
             for shelf in accumulation.shelves.values() {
-                Self::draw_single_shelf(dc, factory, resources, shelf, virt_x, virt_y)?;
+                Self::draw_single_shelf(dc, factory, resources, shelf, op, virt_x, virt_y)?;
             }
+            resources.mound_fill_brush.SetOpacity(1.0);
+            resources.mound_outline_brush.SetOpacity(1.0);
+            resources.mound_highlight_brush.SetOpacity(1.0);
         }
         Ok(())
     }
@@ -194,6 +211,7 @@ impl DrawEngine {
         factory: &ID2D1Factory1,
         resources: &RenderResources,
         shelf: &crate::accumulation::SnowShelf,
+        accumulation_opacity: f32,
         virt_x: f32,
         virt_y: f32,
     ) -> Result<()> {
@@ -354,7 +372,7 @@ impl DrawEngine {
                         dc.DrawBitmap(
                             &resources.sprite_small_soft,
                             Some(&dest_rect),
-                            0.45,
+                            0.45 * accumulation_opacity,
                             D2D1_INTERPOLATION_MODE_LINEAR,
                             None,
                             None,
@@ -372,6 +390,7 @@ impl DrawEngine {
         factory: &ID2D1Factory1,
         resources: &RenderResources,
         tractor: &TractorSystem,
+        accumulation_opacity: f32,
         virt_x: f32,
         virt_y: f32,
     ) -> Result<()> {
@@ -432,12 +451,13 @@ impl DrawEngine {
                     radiusX: 5.5,
                     radiusY: w_h * 0.52,
                 };
-                resources.mound_outline_brush.SetOpacity(0.58 * alpha);
-                resources.mound_fill_brush.SetOpacity(0.95 * alpha);
+                let op = accumulation_opacity.clamp(0.15, 1.0);
+                resources.mound_outline_brush.SetOpacity(0.62 * op * alpha);
+                resources.mound_fill_brush.SetOpacity(op * alpha);
                 dc.DrawEllipse(&wave_ellipse, &resources.mound_outline_brush, 1.4, None);
                 dc.FillEllipse(&wave_ellipse, &resources.mound_fill_brush);
-                resources.mound_outline_brush.SetOpacity(0.58);
-                resources.mound_fill_brush.SetOpacity(0.92);
+                resources.mound_outline_brush.SetOpacity(1.0);
+                resources.mound_fill_brush.SetOpacity(1.0);
             }
 
             // 3. Exhaust pipe on hood

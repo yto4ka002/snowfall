@@ -150,6 +150,9 @@ Snowfall includes a native, lightweight Win32 control center accessible anytime:
 | **Fall Speed** | Adjust gravitational descent velocity (0.2x to 3.0x) |
 | **Wind Intensity** | Adjust horizontal drift and squall force |
 | **Snow Depth** | Maximum snow accumulation thickness on window borders (8 to 60 px) |
+| **Snow Mound Transparency** | Adjust accumulated snow transparency from 0% (solid opaque) to 85% |
+| **Clear Snow (Tractor)** | Immediately dispatch the snowplow tractor across all snowy windows |
+| **Auto Tractor Patrol** | Enable automatic tractor snow clearing every 2–3 minutes |
 | **Shake Sensitivity** | Threshold for Aero Shake snow detachment (Low, Normal, High) |
 | **Snow Over Windows** | Toggle whether snowflakes fall over or behind application windows |
 | **Accumulation** | Enable or disable physical snow buildup on windows |

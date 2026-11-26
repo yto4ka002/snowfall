@@ -75,6 +75,7 @@ impl Renderer {
             particles,
             accumulation,
             tractor,
+            settings.accumulation_opacity,
             occluders,
             self.overlay.x as f32,
             self.overlay.y as f32,

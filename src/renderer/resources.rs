@@ -58,10 +58,10 @@ impl RenderResources {
 
             let mound_fill_brush = d2d_dc.CreateSolidColorBrush(
                 &D2D1_COLOR_F {
-                    r: 0.95,
-                    g: 0.97,
+                    r: 0.97,
+                    g: 0.985,
                     b: 1.0,
-                    a: 0.92,
+                    a: 1.0,
                 },
                 None,
             )?;
@@ -71,7 +71,7 @@ impl RenderResources {
                     r: 1.0,
                     g: 1.0,
                     b: 1.0,
-                    a: 0.70,
+                    a: 0.85,
                 },
                 None,
             )?;
