@@ -1,8 +1,0 @@
-{
-  "tag_name": "v1.1.0",
-  "target_commitish": "main",
-  "name": "Snowfall v1.1.0 — Visuals, Physics & Performance Upgrade",
-  "body": "## ❄️ What's New in Snowfall v1.1.0\n\n- **Smooth Quadratic Bezier Snow Mounds**: Replaced polygonal line segments with midpoint-interpolated Quadratic Beziers and added soft 3D contact shading.\n- **Interactive Cursor Snow Brushing**: Sweeping your cursor quickly across snow-covered window ledges brushes snow off naturally.\n- **Wind Gust Powder Erosion**: Strong wind gusts blow fine snow powder wisps off tall snow peaks.\n- **Weather Presets**: 1-click presets (`Light Snow`, `Snowfall`, `Blizzard`) and a custom snowflake titlebar icon in the Control Center.\n- **Zero-Allocation Hot Loop**: Eliminated per-frame heap allocations and batched Direct2D transforms for rock-solid 60 FPS.",
-  "draft": false,
-  "prerelease": false
-}
