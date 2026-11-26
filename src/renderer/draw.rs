@@ -291,6 +291,9 @@ impl DrawEngine {
             sink.EndFigure(D2D1_FIGURE_END_CLOSED);
             sink.Close()?;
 
+            // Subtle cool ice-blue contour around the mound so snow is visible on white backgrounds
+            dc.DrawGeometry(&fill_geo, &resources.mound_outline_brush, 1.8, None);
+
             // Fill with soft snow mound brush
             dc.FillGeometry(&fill_geo, &resources.mound_fill_brush, None);
 

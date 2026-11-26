@@ -11,12 +11,28 @@ pub struct RenderResources {
     pub mound_fill_brush: ID2D1SolidColorBrush,
     pub mound_highlight_brush: ID2D1SolidColorBrush,
     pub mound_shadow_brush: ID2D1SolidColorBrush,
+    pub mound_outline_brush: ID2D1SolidColorBrush,
 
     // Pre-rendered high-quality snowflake textures
     pub sprite_small_soft: ID2D1Bitmap1,
     pub sprite_medium_crystal: ID2D1Bitmap1,
     pub sprite_large_fluff: ID2D1Bitmap1,
     pub sprite_glitter: ID2D1Bitmap1,
+}
+
+#[inline]
+fn write_premul_pixel(pixels: &mut [u8], idx: usize, white: f32, rim: f32) {
+    let w = white.clamp(0.0, 1.0);
+    let s = rim.clamp(0.0, 1.0);
+    let a = (w + s * (1.0 - w)).clamp(0.0, 1.0);
+    // Cool ice-slate rim color (R=0.45, G=0.56, B=0.74) in premultiplied BGRA
+    let r = (w + 0.45 * s * (1.0 - w)).clamp(0.0, a);
+    let g = (w + 0.56 * s * (1.0 - w)).clamp(0.0, a);
+    let b = (w + 0.74 * s * (1.0 - w)).clamp(0.0, a);
+    pixels[idx] = (b * 255.0) as u8;
+    pixels[idx + 1] = (g * 255.0) as u8;
+    pixels[idx + 2] = (r * 255.0) as u8;
+    pixels[idx + 3] = (a * 255.0) as u8;
 }
 
 impl RenderResources {
@@ -62,6 +78,16 @@ impl RenderResources {
                 None,
             )?;
 
+            let mound_outline_brush = d2d_dc.CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: 0.48,
+                    g: 0.59,
+                    b: 0.75,
+                    a: 0.58,
+                },
+                None,
+            )?;
+
             let sprite_small_soft = Self::create_soft_disc_sprite(d2d_factory, d2d_dc, 48)?;
             let sprite_medium_crystal = Self::create_crystal_sprite(d2d_factory, d2d_dc, 64)?;
             let sprite_large_fluff = Self::create_fluff_sprite(d2d_factory, d2d_dc, 64)?;
@@ -72,6 +98,7 @@ impl RenderResources {
                 mound_fill_brush,
                 mound_highlight_brush,
                 mound_shadow_brush,
+                mound_outline_brush,
                 sprite_small_soft,
                 sprite_medium_crystal,
                 sprite_large_fluff,
@@ -96,14 +123,16 @@ impl RenderResources {
                 let dist = (dx * dx + dy * dy).sqrt();
 
                 if dist <= radius {
-                    let factor = (1.0 - dist / radius).clamp(0.0, 1.0);
-                    let alpha = (factor.powf(1.8) * 255.0) as u8;
+                    let core_rad = radius * 0.72;
+                    let white = if dist <= core_rad {
+                        (1.0 - dist / core_rad).clamp(0.0, 1.0).powf(1.6)
+                    } else {
+                        0.0
+                    };
+                    let rim = (1.0 - dist / radius).clamp(0.0, 1.0).powf(1.4) * 0.50;
 
                     let idx = ((y * size + x) * 4) as usize;
-                    pixels[idx] = alpha;     // B
-                    pixels[idx + 1] = alpha; // G
-                    pixels[idx + 2] = alpha; // R
-                    pixels[idx + 3] = alpha; // A
+                    write_premul_pixel(&mut pixels, idx, white, rim);
                 }
             }
         }
@@ -152,10 +181,16 @@ impl RenderResources {
 
                     let d_spine = dist * local_angle.sin();
                     let spine_w = 1.4;
+                    let spine_w_rim = 3.2;
 
                     let mut intensity = 0.0f32;
                     if d_spine < spine_w {
                         intensity = (1.0 - d_spine / spine_w).max(intensity);
+                    }
+
+                    let mut rim_intensity = 0.0f32;
+                    if d_spine < spine_w_rim {
+                        rim_intensity = (1.0 - d_spine / spine_w_rim).max(rim_intensity);
                     }
 
                     let r_norm = dist / radius;
@@ -164,18 +199,20 @@ impl RenderResources {
                         if branch_dist < 0.12 && d_spine < 3.2 {
                             intensity = intensity.max(0.75 - branch_dist * 4.0);
                         }
+                        if branch_dist < 0.18 && d_spine < 5.0 {
+                            rim_intensity = rim_intensity.max(0.65 - branch_dist * 2.5);
+                        }
                     }
 
                     if dist < 3.5 {
                         intensity = intensity.max(1.0 - dist / 3.5);
                     }
+                    if dist < 5.5 {
+                        rim_intensity = rim_intensity.max(1.0 - dist / 5.5);
+                    }
 
-                    let alpha = (intensity.clamp(0.0, 1.0) * 255.0) as u8;
                     let idx = ((y * size + x) * 4) as usize;
-                    pixels[idx] = alpha;
-                    pixels[idx + 1] = alpha;
-                    pixels[idx + 2] = alpha;
-                    pixels[idx + 3] = alpha;
+                    write_premul_pixel(&mut pixels, idx, intensity, rim_intensity * 0.52);
                 }
             }
         }
@@ -226,23 +263,25 @@ impl RenderResources {
                 let dy = y as f32 - center;
 
                 let mut total_alpha = 0.0f32;
+                let mut total_rim = 0.0f32;
                 for (scx, scy, sc_rad) in &sub_centers {
                     let sx = scx * radius;
                     let sy = scy * radius;
                     let s_rad = sc_rad * radius;
+                    let core_rad = s_rad * 0.78;
                     let dist = ((dx - sx) * (dx - sx) + (dy - sy) * (dy - sy)).sqrt();
+                    if dist <= core_rad {
+                        let falloff = (1.0 - dist / core_rad).clamp(0.0, 1.0).powf(1.4);
+                        total_alpha += falloff * 0.48;
+                    }
                     if dist <= s_rad {
-                        let falloff = (1.0 - dist / s_rad).clamp(0.0, 1.0).powf(1.4);
-                        total_alpha += falloff * 0.45;
+                        let rim_falloff = (1.0 - dist / s_rad).clamp(0.0, 1.0).powf(1.2);
+                        total_rim += rim_falloff * 0.35;
                     }
                 }
 
-                let alpha = (total_alpha.clamp(0.0, 1.0) * 255.0) as u8;
                 let idx = ((y * size + x) * 4) as usize;
-                pixels[idx] = alpha;
-                pixels[idx + 1] = alpha;
-                pixels[idx + 2] = alpha;
-                pixels[idx + 3] = alpha;
+                write_premul_pixel(&mut pixels, idx, total_alpha, total_rim.min(0.55));
             }
         }
 
@@ -294,20 +333,34 @@ impl RenderResources {
                     0.0
                 };
 
+                let ray_h_rim = if dy < 3.8 && dx <= radius {
+                    (1.0 - dx / radius) * (1.0 - dy / 3.8)
+                } else {
+                    0.0
+                };
+
+                let ray_v_rim = if dx < 3.8 && dy <= radius {
+                    (1.0 - dy / radius) * (1.0 - dx / 3.8)
+                } else {
+                    0.0
+                };
+
                 let core_dist = (dx * dx + dy * dy).sqrt();
                 let core = if core_dist < 4.5 {
                     (1.0 - core_dist / 4.5).powi(2)
                 } else {
                     0.0
                 };
+                let core_rim = if core_dist < 7.0 {
+                    (1.0 - core_dist / 7.0).powi(2)
+                } else {
+                    0.0
+                };
 
                 let intensity = (ray_h + ray_v + core).clamp(0.0, 1.0);
-                let alpha = (intensity * 255.0) as u8;
+                let rim_intensity = (ray_h_rim + ray_v_rim + core_rim).clamp(0.0, 1.0);
                 let idx = ((y * size + x) * 4) as usize;
-                pixels[idx] = alpha;
-                pixels[idx + 1] = alpha;
-                pixels[idx + 2] = alpha;
-                pixels[idx + 3] = alpha;
+                write_premul_pixel(&mut pixels, idx, intensity, rim_intensity * 0.50);
             }
         }
 
